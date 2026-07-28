@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:tns="http://localhost:8000/productos/wsdl"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="http://localhost:8000/productos/wsdl"
+    name="ProductosService">
+
+    <types>
+        <xsd:schema targetNamespace="http://localhost:8000/productos/wsdl">
+            <xsd:element name="RegistrarProductoRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="codigo" type="xsd:string"/>
+                        <xsd:element name="nombre" type="xsd:string"/>
+                        <xsd:element name="categoria" type="xsd:string"/>
+                        <xsd:element name="precio" type="xsd:decimal"/>
+                        <xsd:element name="cantidad" type="xsd:int"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="RegistrarProductoResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="mensaje" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="ConsultarProductoRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="codigo" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="ConsultarProductoResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="codigo" type="xsd:string"/>
+                        <xsd:element name="nombre" type="xsd:string"/>
+                        <xsd:element name="categoria" type="xsd:string"/>
+                        <xsd:element name="precio" type="xsd:decimal"/>
+                        <xsd:element name="cantidad" type="xsd:int"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="ListarProductosRequest" type="xsd:string"/>
+
+            <xsd:element name="ListarProductosResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="producto" minOccurs="0" maxOccurs="unbounded">
+                            <xsd:complexType>
+                                <xsd:sequence>
+                                    <xsd:element name="codigo" type="xsd:string"/>
+                                    <xsd:element name="nombre" type="xsd:string"/>
+                                    <xsd:element name="categoria" type="xsd:string"/>
+                                    <xsd:element name="precio" type="xsd:decimal"/>
+                                    <xsd:element name="cantidad" type="xsd:int"/>
+                                </xsd:sequence>
+                            </xsd:complexType>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="ActualizarStockRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="codigo" type="xsd:string"/>
+                        <xsd:element name="nuevaCantidad" type="xsd:int"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="ActualizarStockResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="mensaje" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="CalcularValorInventarioRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="codigo" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="CalcularValorInventarioResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="valorInventario" type="xsd:decimal"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="EliminarProductoRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="codigo" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="EliminarProductoResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="mensaje" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+        </xsd:schema>
+    </types>
+
+    <message name="RegistrarProductoInputMessage">
+        <part name="parameters" element="tns:RegistrarProductoRequest"/>
+    </message>
+    <message name="RegistrarProductoOutputMessage">
+        <part name="parameters" element="tns:RegistrarProductoResponse"/>
+    </message>
+
+    <message name="ConsultarProductoInputMessage">
+        <part name="parameters" element="tns:ConsultarProductoRequest"/>
+    </message>
+    <message name="ConsultarProductoOutputMessage">
+        <part name="parameters" element="tns:ConsultarProductoResponse"/>
+    </message>
+
+    <message name="ListarProductosInputMessage">
+        <part name="parameters" element="tns:ListarProductosRequest"/>
+    </message>
+    <message name="ListarProductosOutputMessage">
+        <part name="parameters" element="tns:ListarProductosResponse"/>
+    </message>
+
+    <message name="ActualizarStockInputMessage">
+        <part name="parameters" element="tns:ActualizarStockRequest"/>
+    </message>
+    <message name="ActualizarStockOutputMessage">
+        <part name="parameters" element="tns:ActualizarStockResponse"/>
+    </message>
+
+    <message name="CalcularValorInventarioInputMessage">
+        <part name="parameters" element="tns:CalcularValorInventarioRequest"/>
+    </message>
+    <message name="CalcularValorInventarioOutputMessage">
+        <part name="parameters" element="tns:CalcularValorInventarioResponse"/>
+    </message>
+
+    <message name="EliminarProductoInputMessage">
+        <part name="parameters" element="tns:EliminarProductoRequest"/>
+    </message>
+    <message name="EliminarProductoOutputMessage">
+        <part name="parameters" element="tns:EliminarProductoResponse"/>
+    </message>
+
+    <portType name="ProductosPortType">
+        <operation name="RegistrarProducto">
+            <input message="tns:RegistrarProductoInputMessage"/>
+            <output message="tns:RegistrarProductoOutputMessage"/>
+        </operation>
+        <operation name="ConsultarProducto">
+            <input message="tns:ConsultarProductoInputMessage"/>
+            <output message="tns:ConsultarProductoOutputMessage"/>
+        </operation>
+        <operation name="ListarProductos">
+            <input message="tns:ListarProductosInputMessage"/>
+            <output message="tns:ListarProductosOutputMessage"/>
+        </operation>
+        <operation name="ActualizarStock">
+            <input message="tns:ActualizarStockInputMessage"/>
+            <output message="tns:ActualizarStockOutputMessage"/>
+        </operation>
+        <operation name="CalcularValorInventario">
+            <input message="tns:CalcularValorInventarioInputMessage"/>
+            <output message="tns:CalcularValorInventarioOutputMessage"/>
+        </operation>
+        <operation name="EliminarProducto">
+            <input message="tns:EliminarProductoInputMessage"/>
+            <output message="tns:EliminarProductoOutputMessage"/>
+        </operation>
+    </portType>
+
+    <binding name="ProductosBinding" type="tns:ProductosPortType">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <operation name="RegistrarProducto">
+            <soap:operation soapAction="urn:RegistrarProducto"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="ConsultarProducto">
+            <soap:operation soapAction="urn:ConsultarProducto"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="ListarProductos">
+            <soap:operation soapAction="urn:ListarProductos"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="ActualizarStock">
+            <soap:operation soapAction="urn:ActualizarStock"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="CalcularValorInventario">
+            <soap:operation soapAction="urn:CalcularValorInventario"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+        <operation name="EliminarProducto">
+            <soap:operation soapAction="urn:EliminarProducto"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+    </binding>
+
+    <service name="ProductosService">
+        <port name="ProductosPort" binding="tns:ProductosBinding">
+            <soap:address location="http://localhost:8000/productos"/>
+        </port>
+    </service>
+</definitions>
