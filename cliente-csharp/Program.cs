@@ -119,7 +119,6 @@ if (!response.IsSuccessStatusCode)
     Console.WriteLine($"[Aviso] El servidor devolvió un error (Código {(int)response.StatusCode}).");
 }
 return result;
-    return content;
 }
 
 static string BuildRequestBody(string operation, string ns, IEnumerable<(string Name, string Value)> values)
