@@ -112,7 +112,13 @@ static async Task<string> InvokeSoapAsync(HttpClient client, string endpoint, st
 
     using var response = await client.SendAsync(request);
     var content = await response.Content.ReadAsStringAsync();
-    response.EnsureSuccessStatusCode();
+    //response.EnsureSuccessStatusCode();
+    string result = await response.Content.ReadAsStringAsync();
+if (!response.IsSuccessStatusCode)
+{
+    Console.WriteLine($"[Aviso] El servidor devolvió un error (Código {(int)response.StatusCode}).");
+}
+return result;
     return content;
 }
 
