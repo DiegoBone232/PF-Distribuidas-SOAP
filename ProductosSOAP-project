@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="http://localhost:8000/productos/wsdl">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <tns:EliminarProductoRequest>
+         <codigo>P010</codigo>
+      </tns:EliminarProductoRequest>
+   </soapenv:Body>
+</soapenv:Envelope>

@@ -29,7 +29,7 @@ function construirEnvelope(cuerpo) {
 }
 
 function construirFault(mensaje) {
-  return construirEnvelope(`<soap:Fault><soap:Reason><soap:Text>${escaparXml(mensaje)}</soap:Text></soap:Reason></soap:Fault>`);
+  return construirEnvelope(`<soap:Fault><faultcode>soap:Server</faultcode><faultstring>${escaparXml(mensaje)}</faultstring></soap:Fault>`);
 }
 
 function validarProductoBase({ codigo, nombre, categoria, precio, cantidad }) {
@@ -63,7 +63,7 @@ function encontrarProducto(codigo) {
 }
 
 function parsearSolicitudSoap(xml) {
-  const bodyMatch = xml.match(/<(?:soap|soapenv):Body[^>]*>([\s\S]*?)<\/(?:soap|soapenv):Body>/i);
+  const bodyMatch = xml.match(/<[A-Za-z0-9-]+:Body[^>]*>([\s\S]*?)<\/[A-Za-z0-9-]+:Body>/i);
   if (!bodyMatch) {
     throw new Error('Solicitud SOAP inválida.');
   }
@@ -167,6 +167,8 @@ app.get('/productos', (req, res) => {
 });
 
 app.post('/productos', (req, res) => {
+  console.log('--- XML recibido ---');
+  console.log(req.body);
   try {
     const { operacion, valores } = parsearSolicitudSoap(req.body || '');
     const resultado = ejecutarOperacion(operacion, valores);
@@ -176,7 +178,9 @@ app.post('/productos', (req, res) => {
     }
 
     return res.status(200).type('application/xml').send(construirEnvelope(`<tns:${operacion}Response>${resultado.success}</tns:${operacion}Response>`));
-  } catch (error) {
+   } catch (error) {
+    console.log('--- ERROR REAL ---');
+    console.log(error.message);
     return res.status(500).type('application/xml').send(construirFault(error.message));
   }
 });
