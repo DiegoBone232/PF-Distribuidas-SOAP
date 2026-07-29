@@ -1,3 +1,6 @@
 node_modules/
 cliente-csharp/bin/
 cliente-csharp/obj/
+
+# Documentación local generada durante el trabajo
+/RESUMEN_CAMBIOS.md
