@@ -28,38 +28,56 @@ function construirEnvelope(cuerpo) {
 </soap:Envelope>`;
 }
 
-function construirFault(mensaje) {
-  return construirEnvelope(`<soap:Fault><faultcode>soap:Server</faultcode><faultstring>${escaparXml(mensaje)}</faultstring></soap:Fault>`);
+function construirRespuestaError(operacion, mensaje) {
+  const nombreOperacion = operacion || 'Error';
+  return construirEnvelope(
+    `<tns:${nombreOperacion}Response><resultado>false[${escaparXml(mensaje)}]</resultado></tns:${nombreOperacion}Response>`,
+  );
+}
+
+function esTextoVacio(valor) {
+  return typeof valor !== 'string' || valor.trim() === '';
+}
+
+function esNumeroPositivo(valor) {
+  const numero = Number(valor);
+  return valor !== undefined && valor !== null && String(valor).trim() !== '' && Number.isFinite(numero) && numero > 0;
+}
+
+function esEnteroNoNegativo(valor) {
+  const numero = Number(valor);
+  return valor !== undefined && valor !== null && String(valor).trim() !== '' && Number.isInteger(numero) && numero >= 0;
+}
+
+function validarCodigo(codigo) {
+  return esTextoVacio(codigo) ? 'El código del producto es obligatorio.' : null;
 }
 
 function validarProductoBase({ codigo, nombre, categoria, precio, cantidad }) {
   const errores = [];
+  const errorCodigo = validarCodigo(codigo);
 
-  if (!codigo || codigo.trim() === '') {
-    errores.push('El código del producto es obligatorio.');
+  if (errorCodigo) {
+    errores.push(errorCodigo);
   }
-
-  if (!nombre || nombre.trim() === '') {
+  if (esTextoVacio(nombre)) {
     errores.push('El nombre del producto es obligatorio.');
   }
-
-  if (!categoria || categoria.trim() === '') {
+  if (esTextoVacio(categoria)) {
     errores.push('La categoría del producto es obligatoria.');
   }
-
-  if (precio === undefined || precio === null || Number(precio) <= 0) {
-    errores.push('El precio debe ser mayor a cero.');
+  if (!esNumeroPositivo(precio)) {
+    errores.push('El precio debe ser un número mayor que cero.');
   }
-
-  if (cantidad === undefined || cantidad === null || Number(cantidad) < 0) {
-    errores.push('La cantidad no puede ser menor a cero.');
+  if (!esEnteroNoNegativo(cantidad)) {
+    errores.push('La cantidad debe ser un número entero igual o mayor que cero.');
   }
 
   return errores;
 }
 
 function encontrarProducto(codigo) {
-  return productos.find((producto) => producto.codigo === codigo);
+  return productos.find((producto) => producto.codigo === codigo.trim());
 }
 
 function parsearSolicitudSoap(xml) {
@@ -96,13 +114,16 @@ function ejecutarOperacion(operacion, valores) {
       if (errores.length > 0) {
         return { fault: errores.join(' ') };
       }
-      if (encontrarProducto(valores.codigo)) {
+
+      const codigo = valores.codigo.trim();
+      if (encontrarProducto(codigo)) {
         return { fault: 'El código del producto ya existe.' };
       }
+
       productos.push({
-        codigo: valores.codigo,
-        nombre: valores.nombre,
-        categoria: valores.categoria,
+        codigo,
+        nombre: valores.nombre.trim(),
+        categoria: valores.categoria.trim(),
         precio: Number(valores.precio),
         cantidad: Number(valores.cantidad),
       });
@@ -110,10 +131,12 @@ function ejecutarOperacion(operacion, valores) {
     }
 
     case 'ConsultarProducto': {
+      const errorCodigo = validarCodigo(valores.codigo);
+      if (errorCodigo) return { fault: errorCodigo };
+
       const producto = encontrarProducto(valores.codigo);
-      if (!producto) {
-        return { fault: 'El producto no existe.' };
-      }
+      if (!producto) return { fault: 'El producto no existe.' };
+
       return {
         success: `<codigo>${escaparXml(producto.codigo)}</codigo><nombre>${escaparXml(producto.nombre)}</nombre><categoria>${escaparXml(producto.categoria)}</categoria><precio>${escaparXml(producto.precio)}</precio><cantidad>${escaparXml(producto.cantidad)}</cantidad>`,
       };
@@ -125,30 +148,36 @@ function ejecutarOperacion(operacion, valores) {
     }
 
     case 'ActualizarStock': {
+      const errorCodigo = validarCodigo(valores.codigo);
+      if (errorCodigo) return { fault: errorCodigo };
+
       const producto = encontrarProducto(valores.codigo);
-      if (!producto) {
-        return { fault: 'El producto no existe.' };
+      if (!producto) return { fault: 'El producto no existe.' };
+      if (!esEnteroNoNegativo(valores.nuevaCantidad)) {
+        return { fault: 'La cantidad debe ser un número entero igual o mayor que cero.' };
       }
-      if (valores.nuevaCantidad === undefined || valores.nuevaCantidad === null || Number(valores.nuevaCantidad) < 0) {
-        return { fault: 'La cantidad no puede ser menor a cero.' };
-      }
+
       producto.cantidad = Number(valores.nuevaCantidad);
       return { success: '<mensaje>Stock actualizado correctamente.</mensaje>' };
     }
 
     case 'CalcularValorInventario': {
+      const errorCodigo = validarCodigo(valores.codigo);
+      if (errorCodigo) return { fault: errorCodigo };
+
       const producto = encontrarProducto(valores.codigo);
-      if (!producto) {
-        return { fault: 'El producto no existe.' };
-      }
+      if (!producto) return { fault: 'El producto no existe.' };
+
       return { success: `<valorInventario>${escaparXml(producto.precio * producto.cantidad)}</valorInventario>` };
     }
 
     case 'EliminarProducto': {
-      const indice = productos.findIndex((producto) => producto.codigo === valores.codigo);
-      if (indice === -1) {
-        return { fault: 'El producto no existe.' };
-      }
+      const errorCodigo = validarCodigo(valores.codigo);
+      if (errorCodigo) return { fault: errorCodigo };
+
+      const indice = productos.findIndex((producto) => producto.codigo === valores.codigo.trim());
+      if (indice === -1) return { fault: 'El producto no existe.' };
+
       productos.splice(indice, 1);
       return { success: '<mensaje>Producto eliminado correctamente.</mensaje>' };
     }
@@ -169,19 +198,23 @@ app.get('/productos', (req, res) => {
 app.post('/productos', (req, res) => {
   console.log('--- XML recibido ---');
   console.log(req.body);
+
+  let operacion = 'Error';
+
   try {
-    const { operacion, valores } = parsearSolicitudSoap(req.body || '');
-    const resultado = ejecutarOperacion(operacion, valores);
+    const solicitud = parsearSolicitudSoap(req.body || '');
+    operacion = solicitud.operacion;
+    const resultado = ejecutarOperacion(operacion, solicitud.valores);
 
     if (resultado.fault) {
-      return res.status(500).type('application/xml').send(construirFault(resultado.fault));
+      return res.status(200).type('application/xml').send(construirRespuestaError(operacion, resultado.fault));
     }
 
     return res.status(200).type('application/xml').send(construirEnvelope(`<tns:${operacion}Response>${resultado.success}</tns:${operacion}Response>`));
-   } catch (error) {
+    } catch (error) {
     console.log('--- ERROR REAL ---');
     console.log(error.message);
-    return res.status(500).type('application/xml').send(construirFault(error.message));
+    return res.status(200).type('application/xml').send(construirRespuestaError(operacion, error.message));
   }
 });
 
