@@ -21,6 +21,34 @@ const db = new sqlite3.Database(DB_PATH, (error) => {
   }
 });
 
+// Promisified helpers for sqlite3 (db.get, db.all, db.run)
+function dbGet(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) return reject(err);
+      resolve(row);
+    });
+  });
+}
+
+function dbAll(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows);
+    });
+  });
+}
+
+function dbRun(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      if (err) return reject(err);
+      resolve(this);
+    });
+  });
+}
+
 function runDb(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function (error) {
@@ -77,6 +105,26 @@ function escaparXml(valor) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
+}
+
+
+function validarCodigo(codigo) {
+    if (!codigo || codigo.trim() === '') {
+        throw new Error('El código del producto es obligatorio.');
+    }
+    return codigo.trim();
+}
+
+function construirRespuestaError(operacion, mensaje) {
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+    <soap:Body>
+        <soap:Fault>
+            <faultcode>soap:Server</faultcode>
+            <faultstring>${mensaje}</faultstring>
+        </soap:Fault>
+    </soap:Body>
+</soap:Envelope>`;
 }
 
 function construirEnvelope(cuerpo) {
@@ -136,6 +184,11 @@ function validarProductoBase({ codigo, nombre, categoria, precio, cantidad }) {
   return errores;
 }
 
+function esEnteroNoNegativo(valor) {
+  const n = Number(valor);
+  return Number.isInteger(n) && n >= 0;
+}
+
 async function encontrarProducto(codigo) {
   const producto = await getDb('SELECT codigo, nombre, categoria, precio, cantidad FROM productos WHERE codigo = ?', [codigo.trim()]);
   return producto || null;
@@ -169,81 +222,84 @@ function parsearSolicitudSoap(xml) {
 }
 
 async function ejecutarOperacion(operacion, valores) {
-  switch (operacion) {
-    case 'RegistrarProducto': {
-      const errores = validarProductoBase(valores);
-      if (errores.length > 0) {
-        return { fault: errores.join(' ') };
+  try {
+    switch (operacion) {
+      case 'RegistrarProducto': {
+        const errores = validarProductoBase(valores);
+        if (errores.length > 0) {
+          throw new Error(errores.join(' '));
+        }
+
+        const codigo = valores.codigo.trim();
+        const productoExistente = await dbGet('SELECT 1 FROM productos WHERE codigo = ?', [codigo]);
+        if (productoExistente) {
+          throw new Error('El código del producto ya existe.');
+        }
+
+        await dbRun(
+          'INSERT INTO productos (codigo, nombre, categoria, precio, cantidad) VALUES (?, ?, ?, ?, ?)',
+          [codigo, valores.nombre.trim(), valores.categoria.trim(), Number(valores.precio), Number(valores.cantidad)],
+        );
+        return { success: '<mensaje>Producto registrado correctamente.</mensaje>' };
       }
 
-      const codigo = valores.codigo.trim();
-      const productoExistente = await getDb('SELECT 1 FROM productos WHERE codigo = ?', [codigo]);
-      if (productoExistente) {
-        return { fault: 'El código del producto ya existe.' };
+      case 'ConsultarProducto': {
+        validarCodigo(valores.codigo);
+
+        const producto = await dbGet('SELECT codigo, nombre, categoria, precio, cantidad FROM productos WHERE codigo = ?', [valores.codigo.trim()]);
+        if (!producto) {
+          return { success: `<mensaje>El producto no fue encontrado.</mensaje>` };
+        }
+
+        return {
+          success: `<codigo>${escaparXml(producto.codigo)}</codigo><nombre>${escaparXml(producto.nombre)}</nombre><categoria>${escaparXml(producto.categoria)}</categoria><precio>${escaparXml(producto.precio)}</precio><cantidad>${escaparXml(producto.cantidad)}</cantidad><mensaje>Consulta realizada correctamente.</mensaje>`,
+        };
       }
 
-      await runDb(
-        'INSERT INTO productos (codigo, nombre, categoria, precio, cantidad) VALUES (?, ?, ?, ?, ?)',
-        [codigo, valores.nombre.trim(), valores.categoria.trim(), Number(valores.precio), Number(valores.cantidad)],
-      );
-      return { success: '<mensaje>Producto registrado correctamente.</mensaje>' };
-    }
-
-    case 'ConsultarProducto': {
-      const errorCodigo = validarCodigo(valores.codigo);
-      if (errorCodigo) return { fault: errorCodigo };
-
-      const producto = await encontrarProducto(valores.codigo);
-      if (!producto) return { fault: 'El producto no existe.' };
-
-      return {
-        success: `<codigo>${escaparXml(producto.codigo)}</codigo><nombre>${escaparXml(producto.nombre)}</nombre><categoria>${escaparXml(producto.categoria)}</categoria><precio>${escaparXml(producto.precio)}</precio><cantidad>${escaparXml(producto.cantidad)}</cantidad>`,
-      };
-    }
-
-    case 'ListarProductos': {
-      const productosDb = await allDb('SELECT codigo, nombre, categoria, precio, cantidad FROM productos ORDER BY codigo');
-      const contenido = productosDb.map((producto) => `<producto><codigo>${escaparXml(producto.codigo)}</codigo><nombre>${escaparXml(producto.nombre)}</nombre><categoria>${escaparXml(producto.categoria)}</categoria><precio>${escaparXml(producto.precio)}</precio><cantidad>${escaparXml(producto.cantidad)}</cantidad></producto>`).join('');
-      return { success: contenido };
-    }
-
-    case 'ActualizarStock': {
-      const errorCodigo = validarCodigo(valores.codigo);
-      if (errorCodigo) return { fault: errorCodigo };
-
-      const producto = await encontrarProducto(valores.codigo);
-      if (!producto) return { fault: 'El producto no existe.' };
-      if (!esEnteroNoNegativo(valores.nuevaCantidad)) {
-        return { fault: 'La cantidad debe ser un número entero igual o mayor que cero.' };
+      case 'ListarProductos': {
+        const productosDb = await dbAll('SELECT codigo, nombre, categoria, precio, cantidad FROM productos ORDER BY codigo');
+        const contenido = productosDb.map((producto) => `<producto><codigo>${escaparXml(producto.codigo)}</codigo><nombre>${escaparXml(producto.nombre)}</nombre><categoria>${escaparXml(producto.categoria)}</categoria><precio>${escaparXml(producto.precio)}</precio><cantidad>${escaparXml(producto.cantidad)}</cantidad></producto>`).join('');
+        return { success: contenido };
       }
 
-      await runDb('UPDATE productos SET cantidad = ? WHERE codigo = ?', [Number(valores.nuevaCantidad), valores.codigo.trim()]);
-      return { success: '<mensaje>Stock actualizado correctamente.</mensaje>' };
+      case 'ActualizarStock': {
+        validarCodigo(valores.codigo);
+
+        const producto = await dbGet('SELECT codigo, cantidad FROM productos WHERE codigo = ?', [valores.codigo.trim()]);
+        if (!producto) throw new Error('El producto no existe.');
+        if (!esEnteroNoNegativo(valores.nuevaCantidad)) {
+          throw new Error('La cantidad debe ser un número entero igual o mayor que cero.');
+        }
+
+        await dbRun('UPDATE productos SET cantidad = ? WHERE codigo = ?', [Number(valores.nuevaCantidad), valores.codigo.trim()]);
+        return { success: '<mensaje>Stock actualizado correctamente.</mensaje>' };
+      }
+
+      case 'CalcularValorInventario': {
+        validarCodigo(valores.codigo);
+
+        const producto = await dbGet('SELECT precio, cantidad FROM productos WHERE codigo = ?', [valores.codigo.trim()]);
+        if (!producto) throw new Error('El producto no existe.');
+
+        return { success: `<valorInventario>${escaparXml(producto.precio * producto.cantidad)}</valorInventario>` };
+      }
+
+      case 'EliminarProducto': {
+        validarCodigo(valores.codigo);
+
+        const productoExistente = await dbGet('SELECT 1 FROM productos WHERE codigo = ?', [valores.codigo.trim()]);
+        if (!productoExistente) throw new Error('El producto no existe.');
+
+        await dbRun('DELETE FROM productos WHERE codigo = ?', [valores.codigo.trim()]);
+        return { success: '<mensaje>Producto eliminado correctamente.</mensaje>' };
+      }
+
+      default:
+        throw new Error('Operación SOAP no soportada.');
     }
-
-    case 'CalcularValorInventario': {
-      const errorCodigo = validarCodigo(valores.codigo);
-      if (errorCodigo) return { fault: errorCodigo };
-
-      const producto = await encontrarProducto(valores.codigo);
-      if (!producto) return { fault: 'El producto no existe.' };
-
-      return { success: `<valorInventario>${escaparXml(producto.precio * producto.cantidad)}</valorInventario>` };
-    }
-
-    case 'EliminarProducto': {
-      const errorCodigo = validarCodigo(valores.codigo);
-      if (errorCodigo) return { fault: errorCodigo };
-
-      const productoExistente = await getDb('SELECT 1 FROM productos WHERE codigo = ?', [valores.codigo.trim()]);
-      if (!productoExistente) return { fault: 'El producto no existe.' };
-
-      await runDb('DELETE FROM productos WHERE codigo = ?', [valores.codigo.trim()]);
-      return { success: '<mensaje>Producto eliminado correctamente.</mensaje>' };
-    }
-
-    default:
-      return { fault: 'Operación SOAP no soportada.' };
+  } catch (err) {
+    // Bubble errors up as { fault: ... } to be handled by caller
+    return { fault: err.message || 'Error al ejecutar la operación.' };
   }
 }
 
