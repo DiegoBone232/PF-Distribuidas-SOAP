@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html lang="es">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gestión de Inventario SOAP</title>
+    <title>Dashboard SOAP</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
       :root {
-        --bg: #0f172a;
-        --panel: #111827;
-        --panel-2: #1f2937;
-        --text: #f8fafc;
+        --bg: #020617;
+        --panel: rgba(15, 23, 42, 0.95);
+        --panel-2: #111827;
+        --text: #edf2f7;
         --muted: #94a3b8;
         --accent: #38bdf8;
         --accent-2: #34d399;
@@ -22,320 +22,568 @@
       * { box-sizing: border-box; }
       body {
         margin: 0;
+        min-height: 100vh;
         font-family: 'Segoe UI', Roboto, Arial, sans-serif;
-        background: linear-gradient(135deg, #020617, #111827 70%);
+        background: linear-gradient(180deg, #020617 0%, #0b1124 100%);
         color: var(--text);
       }
 
       .app-shell {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 24px;
-      }
-
-      header {
-        background: rgba(17, 24, 39, 0.95);
-        border: 1px solid var(--border);
-        border-radius: 18px;
-        padding: 20px 24px;
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 16px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-        margin-bottom: 24px;
+        min-height: 100vh;
       }
 
-      .brand h1 {
+      .sidebar {
+        width: 280px;
+        padding: 28px 20px;
+        background: rgba(6, 12, 29, 0.98);
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .sidebar .brand {
+        margin-bottom: 36px;
+      }
+
+      .sidebar .brand h1 {
         margin: 0;
-        font-size: 1.4rem;
+        font-size: 1.45rem;
       }
 
-      .brand p {
-        margin: 4px 0 0;
+      .sidebar .brand p {
+        margin: 10px 0 0;
         color: var(--muted);
+        font-size: 0.95rem;
+        line-height: 1.5;
+      }
+
+      .nav-menu {
+        display: grid;
+        gap: 10px;
+      }
+
+      .nav-btn {
+        width: 100%;
+        text-align: left;
+        padding: 14px 16px;
+        border: 1px solid transparent;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text);
+        cursor: pointer;
+        transition: all 0.22s ease;
         font-size: 0.95rem;
       }
 
-      .content {
-        display: flex;
-        gap: 24px;
-        flex-wrap: wrap;
+      .nav-btn:hover,
+      .nav-btn.active {
+        border-color: rgba(56, 189, 248, 0.3);
+        background: rgba(56, 189, 248, 0.12);
       }
 
-      .header-actions {
+      .main-panel {
+        flex: 1;
         display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-left: auto;
+        flex-direction: column;
+        padding: 28px;
       }
 
-      .panel {
-        background: rgba(17, 24, 39, 0.95);
-        border: 1px solid var(--border);
-        border-radius: 18px;
-        padding: 20px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.18);
-      }
-
-      .form-panel { flex: 1 1 320px; max-width: 360px; }
-      .table-panel { flex: 2 1 600px; min-width: 320px; }
-      .bottom-row {
+      .main-header {
         display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
         gap: 20px;
-        margin-top: 24px;
-        flex-wrap: wrap;
+        margin-bottom: 24px;
       }
-      .bottom-row > .panel {
-        flex: 1 1 320px;
-        min-width: 320px;
+
+      .page-title h2 {
+        margin: 0;
+        font-size: 1.55rem;
       }
-      .map-panel {
-        min-height: 420px;
-        max-width: 360px;
-        align-self: flex-start;
+
+      .page-title p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        line-height: 1.6;
       }
-      .weather-card {
+
+      .weather-widget {
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 10px 12px;
-        border-radius: 14px;
-        background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(37, 99, 235, 0.15));
-        border: 1px solid rgba(56, 189, 248, 0.2);
-        min-width: 260px;
+        gap: 14px;
+        padding: 16px 18px;
+        min-width: 280px;
+        border-radius: 18px;
+        border: 1px solid rgba(56, 189, 248, 0.18);
+        background: rgba(15, 23, 42, 0.95);
       }
-      .weather-card .weather-main {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 72px;
-      }
-      .weather-card img {
+
+      .weather-widget img {
         width: 64px;
         height: 64px;
       }
-      .weather-card .temp {
-        font-size: 1.3rem;
+
+      .weather-info {
+        display: grid;
+        gap: 6px;
+      }
+
+      .weather-info .temp {
+        font-size: 1.65rem;
         font-weight: 700;
       }
-      .weather-card .description {
-        font-size: 0.9rem;
+
+      .weather-info .description {
         color: var(--accent);
         text-transform: capitalize;
-        margin-bottom: 4px;
+        font-size: 0.95rem;
       }
-      .weather-card .city {
-        font-size: 0.8rem;
-        color: rgba(255,255,255,0.8);
-      }
-      .weather-stats {
-        display: flex;
-        gap: 10px;
-        margin-top: 6px;
-        flex-wrap: wrap;
-      }
-      .weather-stat {
-        display: flex;
-        align-items: center;
-        gap: 4px;
+
+      .weather-info .city {
         color: var(--muted);
-        font-size: 0.78rem;
-      }
-      .weather-stat strong {
-        color: var(--text);
+        font-size: 0.88rem;
       }
 
-      h2 { margin-top: 0; font-size: 1.1rem; }
+      .weather-panel-stats {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+      }
 
-      form { display: flex; flex-direction: column; gap: 12px; }
-      label { display: flex; flex-direction: column; gap: 6px; font-size: 0.95rem; color: var(--muted); }
+      .weather-stat {
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .view-panel {
+        display: none;
+        flex: 1;
+      }
+
+      .view-panel.active {
+        display: block;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 22px;
+        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+        padding: 26px;
+      }
+
+      .panel + .panel {
+        margin-top: 24px;
+      }
+
+      .panel h3 {
+        margin: 0 0 18px;
+        font-size: 1.2rem;
+      }
+
+      .form-grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      label {
+        display: grid;
+        gap: 8px;
+        font-size: 0.92rem;
+        color: var(--muted);
+      }
+
       input {
-        padding: 10px 12px;
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        background: var(--panel-2);
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        background: #111827;
         color: var(--text);
       }
 
-      button {
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 14px 20px;
+        border-radius: 14px;
         border: none;
-        padding: 10px 14px;
-        border-radius: 10px;
         cursor: pointer;
-        font-weight: 600;
+        font-weight: 700;
+        transition: transform 0.18s ease, filter 0.18s ease;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
       }
 
       .btn-primary {
-        background: var(--accent);
-        color: #052e16;
+        background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+        color: #06202a;
       }
 
       .btn-secondary {
-        background: var(--accent-2);
-        color: #052e16;
+        background: linear-gradient(135deg, #34d399, #10b981);
+        color: #06202a;
+      }
+
+      .btn-danger {
+        background: #e74c3c;
+        color: #fff;
+      }
+
+      .output-card {
+        margin-top: 18px;
+        padding: 18px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .output-card p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .output-card strong {
+        display: block;
+        margin-top: 10px;
+        font-size: 1rem;
+        color: var(--text);
       }
 
       .message {
         margin-top: 14px;
-        padding: 10px 12px;
-        border-radius: 10px;
-        font-size: 0.95rem;
-        display: none;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(56, 189, 248, 0.08);
+        color: #d0f0ff;
+        border: 1px solid rgba(56, 189, 248, 0.18);
       }
 
-      .message.success { display: block; background: rgba(52, 211, 153, 0.14); color: #bbf7d0; }
-      .message.error { display: block; background: rgba(248, 113, 113, 0.14); color: #fecaca; }
+      .message.error {
+        background: rgba(248, 113, 113, 0.15);
+        border-color: rgba(231, 76, 60, 0.25);
+        color: #ffd9d1;
+      }
 
-      .table-wrap { overflow-x: auto; }
+      .table-wrap {
+        overflow-x: auto;
+      }
+
       table {
         width: 100%;
         border-collapse: collapse;
-        margin-top: 12px;
+        margin-top: 14px;
+        min-width: 640px;
       }
-      th, td {
-        text-align: left;
-        padding: 12px 10px;
-        border-bottom: 1px solid var(--border);
-      }
-      th { color: var(--muted); font-weight: 600; }
-      tbody tr:hover { background: rgba(255,255,255,0.04); }
 
-      @media (max-width: 900px) {
-        header { flex-direction: column; align-items: flex-start; gap: 12px; }
-        .form-panel, .table-panel { max-width: none; }
+      th,
+      td {
+        padding: 14px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        font-size: 0.92rem;
+      }
+
+      th {
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      td {
+        color: var(--text);
+      }
+
+      .table-actions {
+        margin-top: 18px;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      #mapa {
+        height: 320px;
+        border-radius: 18px;
+        margin-top: 20px;
+      }
+
+      .warning-box {
+        padding: 18px 16px;
+        border-radius: 16px;
+        background: rgba(231, 76, 60, 0.08);
+        border: 1px solid rgba(231, 76, 60, 0.22);
+        color: #ffd9d1;
+      }
+
+      .warning-box strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .output-large {
+        margin-top: 18px;
+        padding: 18px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.02);
+        font-size: 1.35rem;
+        color: var(--text);
+        text-align: center;
+      }
+
+      .detail-card {
+        margin-top: 18px;
+        padding: 18px;
+        border-radius: 16px;
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid rgba(148, 163, 184, 0.15);
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      @media (max-width: 1200px) {
+        .sidebar {
+          width: 240px;
+        }
+      }
+
+      @media (max-width: 980px) {
+        .app-shell {
+          flex-direction: column;
+        }
+
+        .sidebar {
+          width: 100%;
+          border-right: none;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .main-panel {
+          padding: 20px;
+        }
+
+        .main-header {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .weather-widget {
+          width: 100%;
+          justify-content: flex-start;
+        }
       }
     </style>
   </head>
   <body>
     <div class="app-shell">
-      <header>
+      <aside class="sidebar">
         <div class="brand">
-          <h1>Inventario SOAP</h1>
-          <p>Gestión de productos con integración SOAP</p>
+          <h1>SOAP Dashboard</h1>
+          <p>Inventario y operaciones SOAP centralizadas.</p>
         </div>
-        <div class="header-actions">
-          <div id="weather" class="weather-card" aria-live="polite"></div>
+        <nav class="nav-menu">
+          <button class="nav-btn active" data-view="vista-registrar">01 Registrar</button>
+          <button class="nav-btn" data-view="vista-consultar">02 Consultar</button>
+          <button class="nav-btn" data-view="vista-listar">03 Listar</button>
+          <button class="nav-btn" data-view="vista-actualizar">04 Actualizar Stock</button>
+          <button class="nav-btn" data-view="vista-valor">05 Calcular Valor</button>
+          <button class="nav-btn" data-view="vista-eliminar">06 Eliminar</button>
+        </nav>
+      </aside>
+
+      <main class="main-panel">
+        <div class="main-header">
+          <div class="page-title">
+            <h2>Dashboard SOAP</h2>
+            <p>Selecciona una operación para trabajar con el inventario y el servicio SOAP.</p>
+          </div>
+          <div id="weather" class="weather-widget" aria-live="polite">
+            <div class="weather-info">
+              <div class="temp">Cargando...</div>
+            </div>
+          </div>
         </div>
-      </header>
 
-      <div class="content">
-        <section class="panel form-panel">
-          <h2>Registrar producto</h2>
-          <form id="productoForm">
-            <label>
-              Código
-              <input type="text" id="codigo" required />
-            </label>
-            <label>
-              Nombre
-              <input type="text" id="nombre" required />
-            </label>
-            <label>
-              Categoría
-              <input type="text" id="categoria" required />
-            </label>
-            <label>
-              Precio
-              <input type="number" id="precio" step="0.01" required />
-            </label>
-            <label>
-              Cantidad
-              <input type="number" id="cantidad" required />
-            </label>
-            <button class="btn-primary" type="submit">Guardar</button>
-          </form>
-          <div id="formMessage" class="message"></div>
-        </section>
-
-        <section class="panel table-panel">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
-            <h2 style="margin:0;">Inventario actual</h2>
-            <button id="refreshBtn" class="btn-secondary" type="button">Actualizar Tabla</button>
+        <section id="vista-registrar" class="view-panel active">
+          <div class="panel">
+            <h3>Registrar producto</h3>
+            <div class="form-grid">
+              <label>
+                Código
+                <input type="text" id="registrarCodigo" placeholder="P001" />
+              </label>
+              <label>
+                Nombre
+                <input type="text" id="registrarNombre" placeholder="Teclado mecánico" />
+              </label>
+              <label>
+                Categoría
+                <input type="text" id="registrarCategoria" placeholder="Periféricos" />
+              </label>
+              <label>
+                Precio
+                <input type="number" id="registrarPrecio" step="0.01" placeholder="49.99" />
+              </label>
+              <label>
+                Cantidad
+                <input type="number" id="registrarCantidad" placeholder="10" />
+              </label>
+              <button class="btn btn-primary" id="btnRegistrar" type="button">Guardar</button>
+            </div>
+            <div id="mensajeRegistrar" class="message"></div>
           </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Código</th>
-                  <th>Nombre</th>
-                  <th>Categoría</th>
-                  <th>Precio</th>
-                  <th>Cantidad</th>
-                </tr>
-              </thead>
-              <tbody id="tablaInventario">
-                <tr>
-                  <td colspan="5" style="color: var(--muted);">Sin datos aún.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div id="tableMessage" class="message"></div>
         </section>
-      </div>
 
-      <div class="bottom-row">
-        <section class="panel map-panel">
-          <h2>Sucursales</h2>
-          <div id="mapa" style="height: 300px; border-radius: 10px; z-index: 1;"></div>
+        <section id="vista-consultar" class="view-panel">
+          <div class="panel">
+            <h3>Consultar producto</h3>
+            <div class="form-grid">
+              <label>
+                Código del producto
+                <input type="text" id="consultarCodigo" placeholder="P001" />
+              </label>
+              <button class="btn btn-primary" id="btnConsultar" type="button">Buscar</button>
+            </div>
+            <div id="consultarResultado" class="detail-card hidden"></div>
+            <div id="mensajeConsultar" class="message"></div>
+          </div>
         </section>
-      </div>
+
+        <section id="vista-listar" class="view-panel">
+          <div class="panel">
+            <h3>Listado de inventario</h3>
+            <div class="table-actions">
+              <button class="btn btn-secondary" id="btnListar" type="button">Actualizar lista</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Categoría</th>
+                    <th>Precio</th>
+                    <th>Cantidad</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaInventario">
+                  <tr>
+                    <td colspan="5" style="color: var(--muted);">Sin datos aún.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="mensajeListar" class="message"></div>
+            <div id="mapa"></div>
+          </div>
+        </section>
+
+        <section id="vista-actualizar" class="view-panel">
+          <div class="panel">
+            <h3>Actualizar stock</h3>
+            <div class="form-grid">
+              <label>
+                Código del producto
+                <input type="text" id="stockCodigo" placeholder="P001" />
+              </label>
+              <label>
+                Nueva cantidad
+                <input type="number" id="stockCantidad" placeholder="25" />
+              </label>
+              <button class="btn btn-primary" id="btnActualizarStock" type="button">Actualizar</button>
+            </div>
+            <div id="mensajeStock" class="message"></div>
+          </div>
+        </section>
+
+        <section id="vista-valor" class="view-panel">
+          <div class="panel">
+            <h3>Calcular valor de inventario</h3>
+            <p style="color: var(--muted); line-height: 1.7;">Selecciona un código de producto y obtén el valor total actual en inventario para ese ítem.</p>
+            <label style="display: block; margin-top: 18px; font-size: 0.92rem; color: var(--muted);">
+              Código del producto
+              <input type="text" id="valorCodigo" placeholder="P001" />
+            </label>
+            <button class="btn btn-secondary" id="btnCalcularValor" type="button" style="margin-top: 16px;">Calcular Total</button>
+            <div id="valorOutput" class="output-card"></div>
+            <div id="mensajeValor" class="message"></div>
+          </div>
+        </section>
+
+        <section id="vista-eliminar" class="view-panel">
+          <div class="panel">
+            <h3>Eliminar producto</h3>
+            <div class="warning-box">
+              <strong>Advertencia</strong>
+              Esta acción no se puede deshacer. El producto se eliminará del inventario permanentemente.
+            </div>
+            <div class="form-grid" style="margin-top: 18px;">
+              <label>
+                Código del producto
+                <input type="text" id="eliminarCodigo" placeholder="P001" />
+              </label>
+              <button class="btn btn-danger" id="btnEliminar" type="button">Eliminar producto</button>
+            </div>
+            <div id="mensajeEliminar" class="message"></div>
+          </div>
+        </section>
+      </main>
     </div>
 
     <script>
       const API_KEY = 'a1c13ac2f6029c4f3bd0c076a0e7b94f';
       const WEATHER_URL = 'https://api.openweathermap.org/data/2.5/weather?q=Quito,ec&units=metric&appid=' + API_KEY;
-      const SOAP_URL = 'http://localhost:8000/productos';
+      const SOAP_ENDPOINT = 'http://localhost:8000/productos';
       const SOAP_NS = 'http://localhost:8000/productos/wsdl';
+      let mapa;
+      let mapaInstanciado = false;
 
       const weatherEl = document.getElementById('weather');
-      const form = document.getElementById('productoForm');
-      const formMessage = document.getElementById('formMessage');
-      const tableMessage = document.getElementById('tableMessage');
+      const navButtons = Array.from(document.querySelectorAll('.nav-btn'));
+      const viewPanels = Array.from(document.querySelectorAll('.view-panel'));
+      const registrarBtn = document.getElementById('btnRegistrar');
+      const consultarBtn = document.getElementById('btnConsultar');
+      const listarBtn = document.getElementById('btnListar');
+      const actualizarStockBtn = document.getElementById('btnActualizarStock');
+      const calcularValorBtn = document.getElementById('btnCalcularValor');
+      const eliminarBtn = document.getElementById('btnEliminar');
       const tablaInventario = document.getElementById('tablaInventario');
-      const refreshBtn = document.getElementById('refreshBtn');
 
-      async function cargarClima() {
-        try {
-          if (!API_KEY) {
-            weatherEl.innerHTML = '<div class="weather-main"><div>🌤️</div></div><div><div class="temp">Sin clave</div><div class="city">Agrega tu API key</div></div>';
-            return;
+      const mensajeRegistrar = document.getElementById('mensajeRegistrar');
+      const mensajeConsultar = document.getElementById('mensajeConsultar');
+      const mensajeListar = document.getElementById('mensajeListar');
+      const mensajeStock = document.getElementById('mensajeStock');
+      const mensajeValor = document.getElementById('mensajeValor');
+      const mensajeEliminar = document.getElementById('mensajeEliminar');
+      const consultarResultado = document.getElementById('consultarResultado');
+      const valorOutput = document.getElementById('valorOutput');
+
+      function cambiarVista(vistaId) {
+        viewPanels.forEach((view) => {
+          view.classList.toggle('active', view.id === vistaId);
+        });
+        navButtons.forEach((button) => {
+          button.classList.toggle('active', button.dataset.view === vistaId);
+        });
+        if (vistaId === 'vista-listar') {
+          listarProductos();
+          if (!mapaInstanciado) {
+            inicializarMapa();
+          } else {
+            setTimeout(() => mapa.invalidateSize(), 200);
           }
-
-          const response = await fetch(WEATHER_URL);
-          if (!response.ok) throw new Error('No se pudo obtener el clima');
-
-          const data = await response.json();
-          const temp = Math.round(data.main.temp);
-          const icon = data.weather?.[0]?.icon || '01d';
-          const description = data.weather?.[0]?.description || 'Sin descripción';
-          const humidity = data.main?.humidity ?? 0;
-          const wind = data.wind?.speed ?? 0;
-
-          weatherEl.innerHTML = `
-            <div class="weather-main">
-              <img src="http://openweathermap.org/img/wn/${icon}@4x.png" alt="${description}" />
-            </div>
-            <div>
-              <div class="temp">${temp}°C</div>
-              <div class="description">${description}</div>
-              <div class="city">${data.name}, ${data.sys.country}</div>
-              <div class="weather-stats">
-                <div class="weather-stat"><span>Humedad</span><strong>${humidity}%</strong></div>
-                <div class="weather-stat"><span>Viento</span><strong>${wind} m/s</strong></div>
-              </div>
-            </div>
-          `;
-        } catch (error) {
-          weatherEl.innerHTML = '<div class="weather-main"><div>🌦️</div></div><div><div class="temp">Error</div><div class="city">No se pudo cargar el clima</div></div>';
-          console.error(error);
         }
       }
 
-      function mostrarMensaje(elemento, tipo, mensaje) {
-        elemento.className = `message ${tipo}`;
-        elemento.textContent = mensaje;
+      navButtons.forEach((button) => {
+        button.addEventListener('click', () => cambiarVista(button.dataset.view));
+      });
+
+      function mostrarMensaje(elemento, tipo, texto) {
+        elemento.textContent = texto;
+        elemento.className = `message${tipo === 'error' ? ' error' : ''}`;
       }
 
       function construirXml(operation, bodyFields = []) {
@@ -343,25 +591,78 @@
         return `<?xml version="1.0" encoding="UTF-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><tns:${operation} xmlns="${SOAP_NS}">${fields}</tns:${operation}></soap:Body></soap:Envelope>`;
       }
 
-      async function enviarSoap(xml, operationName) {
-        const response = await fetch(SOAP_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/xml' },
-          body: xml,
-        });
+      async function enviarSoap(xml) {
+        try {
+          const response = await fetch(SOAP_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/xml' },
+            mode: 'cors',
+            body: xml,
+          });
 
-        const text = await response.text();
-        if (!response.ok) {
-          throw new Error(`Error HTTP ${response.status}: ${text}`);
+          const text = await response.text();
+          if (!response.ok || text.includes('<soap:Fault>')) {
+              const xmlDoc = new DOMParser().parseFromString(text, 'text/xml');
+              let mensajeError = "Error en el servidor SOAP";
+
+              // Intenta extraer el error en formato SOAP 1.2 o SOAP 1.1
+              const nodoTexto = xmlDoc.getElementsByTagName('soap:Text')[0] || 
+                                xmlDoc.getElementsByTagName('Text')[0] || 
+                                xmlDoc.getElementsByTagName('faultstring')[0];
+
+              if (nodoTexto) {
+                  mensajeError = nodoTexto.textContent;
+              }
+              throw new Error(mensajeError);
+          }
+
+          return text;
+        } catch (error) {
+          throw new Error(error.message || 'No se pudo conectar con el servicio SOAP.');
         }
-        return text;
+      }
+
+      async function cargarClima() {
+        try {
+          if (!API_KEY) {
+            weatherEl.innerHTML = '<div class="weather-info"><div class="temp">Sin clave</div></div>';
+            return;
+          }
+          const response = await fetch(WEATHER_URL);
+          if (!response.ok) throw new Error('No se pudo obtener el clima');
+          const data = await response.json();
+          const temp = Math.round(data.main.temp);
+          const icon = data.weather?.[0]?.icon || '01d';
+          const description = data.weather?.[0]?.description || 'Sin descripción';
+          const humidity = data.main?.humidity ?? 0;
+          const wind = data.wind?.speed ?? 0;
+          weatherEl.innerHTML = `
+            <img src="http://openweathermap.org/img/wn/${icon}@4x.png" alt="${description}" />
+            <div class="weather-info">
+              <div class="temp">${temp}°C</div>
+              <div class="description">${description}</div>
+              <div class="city">${data.name}, ${data.sys.country}</div>
+              <div class="weather-panel-stats">
+                <span class="weather-stat">Humedad: <strong>${humidity}%</strong></span>
+                <span class="weather-stat">Viento: <strong>${wind} m/s</strong></span>
+              </div>
+            </div>
+          `;
+        } catch (error) {
+          weatherEl.innerHTML = `
+            <div class="weather-info">
+              <div class="temp">Error</div>
+              <div class="city">No se pudo cargar el clima</div>
+            </div>
+          `;
+          console.error(error);
+        }
       }
 
       function parsearInventario(xmlText) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(xmlText, 'application/xml');
-        const productos = Array.from(doc.getElementsByTagName('producto'));
-        return productos.map((producto) => ({
+        return Array.from(doc.getElementsByTagName('producto')).map((producto) => ({
           codigo: producto.getElementsByTagName('codigo')[0]?.textContent || '',
           nombre: producto.getElementsByTagName('nombre')[0]?.textContent || '',
           categoria: producto.getElementsByTagName('categoria')[0]?.textContent || '',
@@ -370,32 +671,43 @@
         }));
       }
 
-      function renderTabla(productos) {
-        if (!productos.length) {
-          tablaInventario.innerHTML = '<tr><td colspan="5" style="color: var(--muted);">No hay productos registrados.</td></tr>';
-          return;
+      async function listarProductos() {
+        try {
+          const xml = construirXml('ListarProductosRequest');
+          const responseText = await enviarSoap(xml);
+          const lower = responseText.toLowerCase();
+          if (lower.includes('fault') || lower.includes('false')) {
+            mostrarMensaje(mensajeListar, 'error', 'No fue posible listar los productos.');
+            return;
+          }
+          const productos = parsearInventario(responseText);
+          if (!productos.length) {
+            tablaInventario.innerHTML = '<tr><td colspan="5" style="color: var(--muted);">No hay productos registrados.</td></tr>';
+          } else {
+            tablaInventario.innerHTML = productos.map((producto) => `
+              <tr>
+                <td>${producto.codigo}</td>
+                <td>${producto.nombre}</td>
+                <td>${producto.categoria}</td>
+                <td>${producto.precio}</td>
+                <td>${producto.cantidad}</td>
+              </tr>
+            `).join('');
+          }
+          mostrarMensaje(mensajeListar, 'success', 'Inventario cargado correctamente.');
+        } catch (error) {
+          mostrarMensaje(mensajeListar, 'error', 'Error al listar productos: ' + (error.message || error));
+          console.error(error);
         }
-
-        tablaInventario.innerHTML = productos.map((producto) => `
-          <tr>
-            <td>${producto.codigo}</td>
-            <td>${producto.nombre}</td>
-            <td>${producto.categoria}</td>
-            <td>${producto.precio}</td>
-            <td>${producto.cantidad}</td>
-          </tr>
-        `).join('');
       }
 
-      form.addEventListener('submit', async (event) => {
-        event.preventDefault();
+      async function registrarProducto() {
         try {
-          const codigo = document.getElementById('codigo').value.trim();
-          const nombre = document.getElementById('nombre').value.trim();
-          const categoria = document.getElementById('categoria').value.trim();
-          const precio = document.getElementById('precio').value.trim();
-          const cantidad = document.getElementById('cantidad').value.trim();
-
+          const codigo = document.getElementById('registrarCodigo').value.trim();
+          const nombre = document.getElementById('registrarNombre').value.trim();
+          const categoria = document.getElementById('registrarCategoria').value.trim();
+          const precio = document.getElementById('registrarPrecio').value.trim();
+          const cantidad = document.getElementById('registrarCantidad').value.trim();
           const xml = construirXml('RegistrarProductoRequest', [
             { name: 'codigo', value: codigo },
             { name: 'nombre', value: nombre },
@@ -403,66 +715,180 @@
             { name: 'precio', value: precio },
             { name: 'cantidad', value: cantidad },
           ]);
-
-          const responseText = await enviarSoap(xml, 'RegistrarProducto');
+          const responseText = await enviarSoap(xml);
           const lower = responseText.toLowerCase();
           if (lower.includes('fault') || lower.includes('false')) {
-            mostrarMensaje(formMessage, 'error', 'No fue posible guardar el producto.');
-          } else {
-            mostrarMensaje(formMessage, 'success', 'Producto guardado correctamente.');
-            form.reset();
+            mostrarMensaje(mensajeRegistrar, 'error', 'No fue posible registrar el producto.');
+            return;
           }
+          mostrarMensaje(mensajeRegistrar, 'success', 'Producto registrado correctamente.');
+          document.getElementById('registrarCodigo').value = '';
+          document.getElementById('registrarNombre').value = '';
+          document.getElementById('registrarCategoria').value = '';
+          document.getElementById('registrarPrecio').value = '';
+          document.getElementById('registrarCantidad').value = '';
         } catch (error) {
-          mostrarMensaje(formMessage, 'error', 'Error al registrar el producto: ' + error.message);
+          mostrarMensaje(mensajeRegistrar, 'error', 'Error al registrar producto: ' + (error.message || error));
           console.error(error);
         }
-      });
+      }
 
-      refreshBtn.addEventListener('click', async () => {
+      async function consultarProducto() {
         try {
-          const xml = construirXml('ListarProductosRequest');
-          const responseText = await enviarSoap(xml, 'ListarProductos');
+          const codigo = document.getElementById('consultarCodigo').value.trim();
+          consultarResultado.innerHTML = '';
+          if (!codigo) {
+            mostrarMensaje(mensajeConsultar, 'error', 'Ingresa un código válido para consultar.');
+            return;
+          }
+          const xml = construirXml('ConsultarProductoRequest', [{ name: 'codigo', value: codigo }]);
+          const responseText = await enviarSoap(xml);
           const lower = responseText.toLowerCase();
           if (lower.includes('fault') || lower.includes('false')) {
-            mostrarMensaje(tableMessage, 'error', 'No fue posible listar los productos.');
-          } else {
-            const productos = parsearInventario(responseText);
-            renderTabla(productos);
-            mostrarMensaje(tableMessage, 'success', 'Tabla actualizada correctamente.');
+            mostrarMensaje(mensajeConsultar, 'error', 'No fue posible consultar el producto.');
+            return;
           }
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(responseText, 'application/xml');
+          const mensajeElem = doc.getElementsByTagName('mensaje')[0];
+          if (mensajeElem) {
+            const texto = mensajeElem.textContent || '';
+            const isNotFound = /no (fue )?encontrad|no existe|no encontrado/i.test(texto);
+            mostrarMensaje(mensajeConsultar, isNotFound ? 'error' : 'success', texto);
+            if (isNotFound) {
+              consultarResultado.innerHTML = '';
+              consultarResultado.classList.add('hidden');
+              return;
+            }
+            // if mensaje present but not an error, try to fill details if available
+          }
+          const nombre = doc.getElementsByTagName('nombre')[0]?.textContent || 'N/A';
+          const categoria = doc.getElementsByTagName('categoria')[0]?.textContent || 'N/A';
+          const precio = doc.getElementsByTagName('precio')[0]?.textContent || '0';
+          const cantidad = doc.getElementsByTagName('cantidad')[0]?.textContent || '0';
+          consultarResultado.innerHTML = `
+            <div class="output-card">
+              <p><strong>Detalles del Producto</strong></p>
+              <p>Código: ${codigo}</p>
+              <p>Nombre: ${nombre}</p>
+              <p>Categoría: ${categoria}</p>
+              <p>Precio: $${precio}</p>
+              <p>Stock: ${cantidad}</p>
+            </div>
+          `;
+          consultarResultado.classList.remove('hidden');
+          // If no explicit <mensaje> was returned, still show success
+          if (!mensajeElem) mostrarMensaje(mensajeConsultar, 'success', 'Consulta realizada correctamente.');
         } catch (error) {
-          mostrarMensaje(tableMessage, 'error', 'Error al actualizar la tabla: ' + error.message);
+          mostrarMensaje(mensajeConsultar, 'error', 'Error al consultar el producto: ' + (error.message || error));
+          consultarResultado.innerHTML = '';
+          consultarResultado.classList.add('hidden');
           console.error(error);
         }
-      });
+      }
+
+      async function actualizarStock() {
+        try {
+          const codigo = document.getElementById('stockCodigo').value.trim();
+          const cantidad = document.getElementById('stockCantidad').value.trim();
+          if (!codigo || !cantidad) {
+            mostrarMensaje(mensajeStock, 'error', 'Completa código y cantidad antes de actualizar.');
+            return;
+          }
+          if (Number.isNaN(Number(cantidad))) {
+            mostrarMensaje(mensajeStock, 'error', 'La cantidad debe ser un número válido.');
+            return;
+          }
+          const xml = construirXml('ActualizarStockRequest', [
+            { name: 'codigo', value: codigo },
+            { name: 'nuevaCantidad', value: cantidad },
+          ]);
+          const responseText = await enviarSoap(xml);
+          const lower = responseText.toLowerCase();
+          if (lower.includes('fault') || lower.includes('false')) {
+            mostrarMensaje(mensajeStock, 'error', 'No fue posible actualizar el stock.');
+            return;
+          }
+          mostrarMensaje(mensajeStock, 'success', 'Stock actualizado correctamente.');
+        } catch (error) {
+          mostrarMensaje(mensajeStock, 'error', 'Error al actualizar stock: ' + (error.message || error));
+          console.error(error);
+        }
+      }
+
+      async function calcularValor() {
+        try {
+          const codigo = document.getElementById('valorCodigo').value.trim();
+          valorOutput.innerHTML = '';
+          if (!codigo) {
+            mostrarMensaje(mensajeValor, 'error', 'Ingresa un código de producto para calcular el valor.');
+            return;
+          }
+          const xml = construirXml('CalcularValorInventarioRequest', [{ name: 'codigo', value: codigo }]);
+          const responseText = await enviarSoap(xml);
+          const lower = responseText.toLowerCase();
+          if (lower.includes('fault') || lower.includes('false')) {
+            mostrarMensaje(mensajeValor, 'error', 'No fue posible calcular el valor.');
+            return;
+          }
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(responseText, 'application/xml');
+          const valor = doc.getElementsByTagName('valorInventario')[0]?.textContent || '0';
+          valorOutput.innerHTML = `<strong>$${valor}</strong>`;
+          mostrarMensaje(mensajeValor, 'success', 'Valor calculado correctamente.');
+        } catch (error) {
+          mostrarMensaje(mensajeValor, 'error', 'Error al calcular el valor: ' + (error.message || error));
+          console.error(error);
+        }
+      }
+
+      async function eliminarProducto() {
+        try {
+          const codigo = document.getElementById('eliminarCodigo').value.trim();
+          if (!codigo) {
+            mostrarMensaje(mensajeEliminar, 'error', 'Ingresa un código válido para eliminar.');
+            return;
+          }
+          const xml = construirXml('EliminarProductoRequest', [{ name: 'codigo', value: codigo }]);
+          const responseText = await enviarSoap(xml);
+          const lower = responseText.toLowerCase();
+          if (lower.includes('fault') || lower.includes('false')) {
+            mostrarMensaje(mensajeEliminar, 'error', 'No fue posible eliminar el producto.');
+            return;
+          }
+          mostrarMensaje(mensajeEliminar, 'success', 'Producto eliminado correctamente.');
+        } catch (error) {
+          mostrarMensaje(mensajeEliminar, 'error', 'Error al eliminar el producto: ' + (error.message || error));
+          console.error(error);
+        }
+      }
 
       function inicializarMapa() {
-        const mapa = L.map('mapa').setView([-0.1807, -78.4678], 11);
-
+        mapa = L.map('mapa').setView([-0.1807, -78.4678], 11);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          attribution: '&copy; OpenStreetMap contributors',
         }).addTo(mapa);
-
         const sucursales = [
           { nombre: 'Almacén Centro', coordenadas: [-0.1807, -78.4678] },
           { nombre: 'Sucursal Norte', coordenadas: [-0.1000, -78.4800] },
           { nombre: 'Sucursal Sur', coordenadas: [-0.2500, -78.5200] },
         ];
-
-        const marcadores = sucursales.map((sucursal) => {
-          const marcador = L.marker(sucursal.coordenadas)
-            .addTo(mapa)
-            .bindPopup(sucursal.nombre);
-          return marcador;
-        });
-
+        const marcadores = sucursales.map((sucursal) => L.marker(sucursal.coordenadas).addTo(mapa).bindPopup(sucursal.nombre));
         const bounds = L.featureGroup(marcadores).getBounds();
-        mapa.fitBounds(bounds, { padding: [15, 15] });
+        mapa.fitBounds(bounds, { padding: [20, 20] });
+        mapaInstanciado = true;
       }
 
+      registrarBtn.addEventListener('click', registrarProducto);
+      consultarBtn.addEventListener('click', consultarProducto);
+      listarBtn.addEventListener('click', listarProductos);
+      actualizarStockBtn.addEventListener('click', actualizarStock);
+      calcularValorBtn.addEventListener('click', calcularValor);
+      eliminarBtn.addEventListener('click', eliminarProducto);
+
       cargarClima();
-      refreshBtn.click();
-      inicializarMapa();
+      listarProductos();
+      cambiarVista('vista-registrar');
     </script>
   </body>
 </html>
