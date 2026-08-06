@@ -123,15 +123,19 @@ return result;
 
 static string BuildRequestBody(string operation, string ns, IEnumerable<(string Name, string Value)> values)
 {
+    // El WSDL declara el elemento raíz de cada solicitud como "<Operacion>Request"
+    // (p. ej. RegistrarProductoRequest); la librería "soap" del servidor exige ese
+    // nombre exacto para poder resolver la operación.
+    var elementName = operation + "Request";
     var fields = values.Select(v => $"<{v.Name}>{EscapeXml(v.Value)}</{v.Name}>");
     var innerXml = string.Join("", fields);
 
     if (operation == "ListarProductos")
     {
-        return $"<{operation} xmlns=\"{ns}\" />";
+        return $"<{elementName} xmlns=\"{ns}\" />";
     }
 
-    return $"<{operation} xmlns=\"{ns}\">{innerXml}</{operation}>";
+    return $"<{elementName} xmlns=\"{ns}\">{innerXml}</{elementName}>";
 }
 
 static string EscapeXml(string input) => string.IsNullOrEmpty(input) ? string.Empty : new XText(input).ToString();

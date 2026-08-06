@@ -24,6 +24,7 @@
             <xsd:element name="RegistrarProductoResponse">
                 <xsd:complexType>
                     <xsd:sequence>
+                        <xsd:element name="estado" type="xsd:boolean"/>
                         <xsd:element name="mensaje" type="xsd:string"/>
                     </xsd:sequence>
                 </xsd:complexType>
@@ -40,11 +41,13 @@
             <xsd:element name="ConsultarProductoResponse">
                 <xsd:complexType>
                     <xsd:sequence>
+                        <xsd:element name="estado" type="xsd:boolean"/>
                         <xsd:element name="codigo" type="xsd:string"/>
                         <xsd:element name="nombre" type="xsd:string"/>
                         <xsd:element name="categoria" type="xsd:string"/>
                         <xsd:element name="precio" type="xsd:decimal"/>
                         <xsd:element name="cantidad" type="xsd:int"/>
+                        <xsd:element name="mensaje" type="xsd:string"/>
                     </xsd:sequence>
                 </xsd:complexType>
             </xsd:element>
@@ -81,7 +84,9 @@
             <xsd:element name="ActualizarStockResponse">
                 <xsd:complexType>
                     <xsd:sequence>
+                        <xsd:element name="estado" type="xsd:boolean"/>
                         <xsd:element name="mensaje" type="xsd:string"/>
+                        <xsd:element name="cantidadActualizada" type="xsd:int"/>
                     </xsd:sequence>
                 </xsd:complexType>
             </xsd:element>
@@ -97,6 +102,11 @@
             <xsd:element name="CalcularValorInventarioResponse">
                 <xsd:complexType>
                     <xsd:sequence>
+                        <xsd:element name="estado" type="xsd:boolean"/>
+                        <xsd:element name="mensaje" type="xsd:string"/>
+                        <xsd:element name="nombre" type="xsd:string"/>
+                        <xsd:element name="precio" type="xsd:decimal"/>
+                        <xsd:element name="cantidad" type="xsd:int"/>
                         <xsd:element name="valorInventario" type="xsd:decimal"/>
                     </xsd:sequence>
                 </xsd:complexType>
@@ -113,6 +123,7 @@
             <xsd:element name="EliminarProductoResponse">
                 <xsd:complexType>
                     <xsd:sequence>
+                        <xsd:element name="estado" type="xsd:boolean"/>
                         <xsd:element name="mensaje" type="xsd:string"/>
                     </xsd:sequence>
                 </xsd:complexType>

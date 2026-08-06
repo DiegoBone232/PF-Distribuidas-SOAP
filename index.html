@@ -671,6 +671,22 @@
         }));
       }
 
+      // Todas las respuestas del servicio (salvo ListarProductos) traen <estado> y
+      // <mensaje>. Se leen esos campos en vez de buscar la palabra "false" en el
+      // texto crudo, porque ese heurístico también se disparaba con respuestas
+      // válidas de "producto no encontrado" (que legítimamente traen estado=false).
+      function leerEstadoYMensaje(xmlText) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xmlText, 'application/xml');
+        const estadoElem = doc.getElementsByTagName('estado')[0];
+        const mensajeElem = doc.getElementsByTagName('mensaje')[0];
+        return {
+          estado: estadoElem ? estadoElem.textContent.trim() === 'true' : null,
+          mensaje: mensajeElem ? mensajeElem.textContent : '',
+          doc,
+        };
+      }
+
       async function listarProductos() {
         try {
           const xml = construirXml('ListarProductosRequest');
@@ -716,12 +732,12 @@
             { name: 'cantidad', value: cantidad },
           ]);
           const responseText = await enviarSoap(xml);
-          const lower = responseText.toLowerCase();
-          if (lower.includes('fault') || lower.includes('false')) {
-            mostrarMensaje(mensajeRegistrar, 'error', 'No fue posible registrar el producto.');
+          const { estado, mensaje } = leerEstadoYMensaje(responseText);
+          if (estado === false) {
+            mostrarMensaje(mensajeRegistrar, 'error', mensaje || 'No fue posible registrar el producto.');
             return;
           }
-          mostrarMensaje(mensajeRegistrar, 'success', 'Producto registrado correctamente.');
+          mostrarMensaje(mensajeRegistrar, 'success', mensaje || 'Producto registrado correctamente.');
           document.getElementById('registrarCodigo').value = '';
           document.getElementById('registrarNombre').value = '';
           document.getElementById('registrarCategoria').value = '';
@@ -743,24 +759,12 @@
           }
           const xml = construirXml('ConsultarProductoRequest', [{ name: 'codigo', value: codigo }]);
           const responseText = await enviarSoap(xml);
-          const lower = responseText.toLowerCase();
-          if (lower.includes('fault') || lower.includes('false')) {
-            mostrarMensaje(mensajeConsultar, 'error', 'No fue posible consultar el producto.');
+          const { estado, mensaje, doc } = leerEstadoYMensaje(responseText);
+          if (estado === false) {
+            mostrarMensaje(mensajeConsultar, 'error', mensaje || 'No fue posible consultar el producto.');
+            consultarResultado.innerHTML = '';
+            consultarResultado.classList.add('hidden');
             return;
-          }
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(responseText, 'application/xml');
-          const mensajeElem = doc.getElementsByTagName('mensaje')[0];
-          if (mensajeElem) {
-            const texto = mensajeElem.textContent || '';
-            const isNotFound = /no (fue )?encontrad|no existe|no encontrado/i.test(texto);
-            mostrarMensaje(mensajeConsultar, isNotFound ? 'error' : 'success', texto);
-            if (isNotFound) {
-              consultarResultado.innerHTML = '';
-              consultarResultado.classList.add('hidden');
-              return;
-            }
-            // if mensaje present but not an error, try to fill details if available
           }
           const nombre = doc.getElementsByTagName('nombre')[0]?.textContent || 'N/A';
           const categoria = doc.getElementsByTagName('categoria')[0]?.textContent || 'N/A';
@@ -777,8 +781,7 @@
             </div>
           `;
           consultarResultado.classList.remove('hidden');
-          // If no explicit <mensaje> was returned, still show success
-          if (!mensajeElem) mostrarMensaje(mensajeConsultar, 'success', 'Consulta realizada correctamente.');
+          mostrarMensaje(mensajeConsultar, 'success', mensaje || 'Consulta realizada correctamente.');
         } catch (error) {
           mostrarMensaje(mensajeConsultar, 'error', 'Error al consultar el producto: ' + (error.message || error));
           consultarResultado.innerHTML = '';
@@ -804,12 +807,12 @@
             { name: 'nuevaCantidad', value: cantidad },
           ]);
           const responseText = await enviarSoap(xml);
-          const lower = responseText.toLowerCase();
-          if (lower.includes('fault') || lower.includes('false')) {
-            mostrarMensaje(mensajeStock, 'error', 'No fue posible actualizar el stock.');
+          const { estado, mensaje } = leerEstadoYMensaje(responseText);
+          if (estado === false) {
+            mostrarMensaje(mensajeStock, 'error', mensaje || 'No fue posible actualizar el stock.');
             return;
           }
-          mostrarMensaje(mensajeStock, 'success', 'Stock actualizado correctamente.');
+          mostrarMensaje(mensajeStock, 'success', mensaje || 'Stock actualizado correctamente.');
         } catch (error) {
           mostrarMensaje(mensajeStock, 'error', 'Error al actualizar stock: ' + (error.message || error));
           console.error(error);
@@ -826,16 +829,14 @@
           }
           const xml = construirXml('CalcularValorInventarioRequest', [{ name: 'codigo', value: codigo }]);
           const responseText = await enviarSoap(xml);
-          const lower = responseText.toLowerCase();
-          if (lower.includes('fault') || lower.includes('false')) {
-            mostrarMensaje(mensajeValor, 'error', 'No fue posible calcular el valor.');
+          const { estado, mensaje, doc } = leerEstadoYMensaje(responseText);
+          if (estado === false) {
+            mostrarMensaje(mensajeValor, 'error', mensaje || 'No fue posible calcular el valor.');
             return;
           }
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(responseText, 'application/xml');
           const valor = doc.getElementsByTagName('valorInventario')[0]?.textContent || '0';
           valorOutput.innerHTML = `<strong>$${valor}</strong>`;
-          mostrarMensaje(mensajeValor, 'success', 'Valor calculado correctamente.');
+          mostrarMensaje(mensajeValor, 'success', mensaje || 'Valor calculado correctamente.');
         } catch (error) {
           mostrarMensaje(mensajeValor, 'error', 'Error al calcular el valor: ' + (error.message || error));
           console.error(error);
@@ -851,12 +852,12 @@
           }
           const xml = construirXml('EliminarProductoRequest', [{ name: 'codigo', value: codigo }]);
           const responseText = await enviarSoap(xml);
-          const lower = responseText.toLowerCase();
-          if (lower.includes('fault') || lower.includes('false')) {
-            mostrarMensaje(mensajeEliminar, 'error', 'No fue posible eliminar el producto.');
+          const { estado, mensaje } = leerEstadoYMensaje(responseText);
+          if (estado === false) {
+            mostrarMensaje(mensajeEliminar, 'error', mensaje || 'No fue posible eliminar el producto.');
             return;
           }
-          mostrarMensaje(mensajeEliminar, 'success', 'Producto eliminado correctamente.');
+          mostrarMensaje(mensajeEliminar, 'success', mensaje || 'Producto eliminado correctamente.');
         } catch (error) {
           mostrarMensaje(mensajeEliminar, 'error', 'Error al eliminar el producto: ' + (error.message || error));
           console.error(error);
