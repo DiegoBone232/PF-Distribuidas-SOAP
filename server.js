@@ -10,6 +10,26 @@ const PORT = 8000;
 const WSDL_PATH = path.join(__dirname, 'productos.wsdl');
 const DB_PATH = path.join(__dirname, 'productos.db');
 
+// Catálogo de sedes físicas donde se distribuye el inventario.
+// IMPORTANTE: este mismo array (mismos id/nombre/lat/lng) también existe,
+// literal, en index.html (constante SEDES) para pintar el mapa. No hay un
+// módulo compartido entre backend y frontend estático, así que si se agrega,
+// quita o renombra una sede hay que actualizar los DOS archivos a mano.
+const SEDES = [
+  { id: 'centro', nombre: 'Almacén Centro', lat: -0.1807, lng: -78.4678 },
+  { id: 'norte', nombre: 'Sucursal Norte', lat: -0.1000, lng: -78.4800 },
+  { id: 'sur', nombre: 'Sucursal Sur', lat: -0.2500, lng: -78.5200 },
+];
+const SEDE_DEFAULT = 'centro';
+const idsDeSedesValidos = new Set(SEDES.map((sede) => sede.id));
+
+function normalizarSede(valor) {
+  if (typeof valor === 'string' && idsDeSedesValidos.has(valor.trim())) {
+    return valor.trim();
+  }
+  return SEDE_DEFAULT;
+}
+
 app.use(cors());
 
 const db = new sqlite3.Database(DB_PATH, (error) => {
@@ -59,6 +79,20 @@ async function inicializarBaseDeDatos() {
       cantidad INTEGER
     )
   `);
+
+  // Migración: agrega la columna "sede" si la tabla viene de una versión
+  // anterior sin esa columna. SQLite no soporta "ADD COLUMN IF NOT EXISTS",
+  // así que se intenta y se ignora el único error esperable (columna
+  // duplicada); cualquier otro error sí se propaga.
+  try {
+    await dbRun(`ALTER TABLE productos ADD COLUMN sede TEXT DEFAULT '${SEDE_DEFAULT}'`);
+    console.log('Columna "sede" agregada a productos');
+  } catch (error) {
+    if (!/duplicate column name/i.test(error.message)) {
+      throw error;
+    }
+  }
+
   console.log('Tabla productos lista en SQLite');
 }
 
@@ -99,7 +133,7 @@ const service = {
     ProductosPort: {
       async RegistrarProducto(args) {
         log('RegistrarProducto - solicitud', args);
-        const { codigo, nombre, categoria, precio, cantidad } = args || {};
+        const { codigo, nombre, categoria, precio, cantidad, sede } = args || {};
 
         const errores = validarProductoBase({ codigo, nombre, categoria, precio, cantidad });
         if (errores.length > 0) {
@@ -116,9 +150,14 @@ const service = {
           return respuesta;
         }
 
+        // "sede" es opcional: si no llega o no es un id del catálogo, se
+        // guarda con el default. Esto no es una validación obligatoria de la
+        // rúbrica, así que nunca rechaza el registro por este motivo.
+        const sedeNormalizada = normalizarSede(sede);
+
         await dbRun(
-          'INSERT INTO productos (codigo, nombre, categoria, precio, cantidad) VALUES (?, ?, ?, ?, ?)',
-          [codigoLimpio, nombre.trim(), categoria.trim(), Number(precio), Number(cantidad)],
+          'INSERT INTO productos (codigo, nombre, categoria, precio, cantidad, sede) VALUES (?, ?, ?, ?, ?, ?)',
+          [codigoLimpio, nombre.trim(), categoria.trim(), Number(precio), Number(cantidad), sedeNormalizada],
         );
 
         const respuesta = { estado: true, mensaje: 'Producto registrado correctamente.' };
@@ -132,7 +171,7 @@ const service = {
 
         if (esTextoVacio(codigo)) {
           const respuesta = {
-            estado: false, codigo: '', nombre: '', categoria: '', precio: 0, cantidad: 0,
+            estado: false, codigo: '', nombre: '', categoria: '', precio: 0, cantidad: 0, sede: '',
             mensaje: 'El código del producto es obligatorio.',
           };
           log('ConsultarProducto - error validación', respuesta);
@@ -140,13 +179,13 @@ const service = {
         }
 
         const producto = await dbGet(
-          'SELECT codigo, nombre, categoria, precio, cantidad FROM productos WHERE codigo = ?',
+          'SELECT codigo, nombre, categoria, precio, cantidad, sede FROM productos WHERE codigo = ?',
           [codigo.trim()],
         );
 
         if (!producto) {
           const respuesta = {
-            estado: false, codigo: codigo.trim(), nombre: '', categoria: '', precio: 0, cantidad: 0,
+            estado: false, codigo: codigo.trim(), nombre: '', categoria: '', precio: 0, cantidad: 0, sede: '',
             mensaje: `El producto con el código ${codigo.trim()} no existe.`,
           };
           log('ConsultarProducto - no encontrado', respuesta);
@@ -160,6 +199,7 @@ const service = {
           categoria: producto.categoria,
           precio: producto.precio,
           cantidad: producto.cantidad,
+          sede: normalizarSede(producto.sede),
           mensaje: 'Consulta realizada correctamente.',
         };
         log('ConsultarProducto - OK', respuesta);
@@ -168,9 +208,10 @@ const service = {
 
       async ListarProductos() {
         log('ListarProductos - solicitud');
-        const productos = await dbAll('SELECT codigo, nombre, categoria, precio, cantidad FROM productos ORDER BY codigo');
-        log('ListarProductos - OK', `${productos.length} producto(s)`);
-        return { producto: productos };
+        const productos = await dbAll('SELECT codigo, nombre, categoria, precio, cantidad, sede FROM productos ORDER BY codigo');
+        const productosConSede = productos.map((producto) => ({ ...producto, sede: normalizarSede(producto.sede) }));
+        log('ListarProductos - OK', `${productosConSede.length} producto(s)`);
+        return { producto: productosConSede };
       },
 
       async ActualizarStock(args) {

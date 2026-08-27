@@ -17,6 +17,8 @@
                         <xsd:element name="categoria" type="xsd:string"/>
                         <xsd:element name="precio" type="xsd:decimal"/>
                         <xsd:element name="cantidad" type="xsd:int"/>
+                        <!-- Opcional: id de sede del catálogo (ver SEDES en server.js/index.html). Si no llega o es inválida, el servidor usa 'centro'. -->
+                        <xsd:element name="sede" type="xsd:string" minOccurs="0"/>
                     </xsd:sequence>
                 </xsd:complexType>
             </xsd:element>
@@ -47,6 +49,7 @@
                         <xsd:element name="categoria" type="xsd:string"/>
                         <xsd:element name="precio" type="xsd:decimal"/>
                         <xsd:element name="cantidad" type="xsd:int"/>
+                        <xsd:element name="sede" type="xsd:string" minOccurs="0"/>
                         <xsd:element name="mensaje" type="xsd:string"/>
                     </xsd:sequence>
                 </xsd:complexType>
@@ -65,6 +68,7 @@
                                     <xsd:element name="categoria" type="xsd:string"/>
                                     <xsd:element name="precio" type="xsd:decimal"/>
                                     <xsd:element name="cantidad" type="xsd:int"/>
+                                    <xsd:element name="sede" type="xsd:string" minOccurs="0"/>
                                 </xsd:sequence>
                             </xsd:complexType>
                         </xsd:element>
