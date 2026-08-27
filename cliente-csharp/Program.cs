@@ -27,13 +27,19 @@ catch (Exception ex)
 
 Console.WriteLine();
 Console.WriteLine("1) Registro de dos productos distintos");
+// "sede" es un campo opcional del WSDL: si no se envía, el servidor lo
+// completa con 'centro' por defecto. Aquí se envía explícitamente en el
+// producto 1 para probar el campo; el producto 2 se deja sin sede a
+// propósito, para confirmar que el cliente sigue funcionando igual aunque
+// no lo mande.
 var producto1 = await InvokeSoapAsync(client, soapEndpoint, "RegistrarProducto", ns, new[]
 {
     ("codigo", "P001"),
     ("nombre", "Monitor"),
     ("categoria", "Electrónica"),
     ("precio", "150"),
-    ("cantidad", "10")
+    ("cantidad", "10"),
+    ("sede", "sur")
 });
 PrintResponse(producto1);
 
