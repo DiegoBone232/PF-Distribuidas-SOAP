@@ -20,12 +20,18 @@ def main():
     print("1. REGISTRO DE DOS PRODUCTOS DISTINTOS")
     print("=" * 60)
     try:
+        # "sede" es un campo opcional del WSDL: si no se envía, el servidor lo
+        # completa con 'centro' por defecto. Aquí se envía explícitamente en
+        # el producto 1 para probar el campo; el producto 2 se deja sin sede
+        # a propósito, para confirmar que el cliente sigue funcionando igual
+        # aunque no lo mande.
         resp1 = client.service.RegistrarProducto(
             codigo="P001",
             nombre="Laptop Lenovo",
             categoria="Electrónica",
             precio=750.50,
             cantidad=10,
+            sede="norte",
         )
         print(f"Producto 1 registrado -> {resp1}")
 
@@ -48,6 +54,8 @@ def main():
     try:
         resultado = client.service.ConsultarProducto(codigo="P001")
         print(f"Producto encontrado -> {resultado}")
+        if getattr(resultado, "sede", None):
+            print(f"  Sede: {resultado.sede}")
     except Fault as e:
         print(f"Error SOAP al consultar producto existente: {e}")
     except Exception as e:
@@ -70,6 +78,9 @@ def main():
     try:
         lista = client.service.ListarProductos("")
         print(f"Lista de productos -> {lista}")
+        for producto in lista:
+            if getattr(producto, "sede", None):
+                print(f"  {producto.codigo} está en la sede: {producto.sede}")
     except Fault as e:
         print(f"Error SOAP al listar productos: {e}")
     except Exception as e:

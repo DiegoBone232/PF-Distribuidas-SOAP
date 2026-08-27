@@ -430,6 +430,10 @@
                 Cantidad
                 <input type="number" id="registrarCantidad" placeholder="10" />
               </label>
+              <label>
+                Sede (opcional)
+                <select id="registrarSede"></select>
+              </label>
               <button class="btn btn-primary" id="btnRegistrar" type="button">Guardar</button>
             </div>
             <div id="mensajeRegistrar" class="message"></div>
@@ -466,11 +470,12 @@
                     <th>Categoría</th>
                     <th>Precio</th>
                     <th>Cantidad</th>
+                    <th>Sede</th>
                   </tr>
                 </thead>
                 <tbody id="tablaInventario">
                   <tr>
-                    <td colspan="5" style="color: var(--muted);">Sin datos aún.</td>
+                    <td colspan="6" style="color: var(--muted);">Sin datos aún.</td>
                   </tr>
                 </tbody>
               </table>
@@ -537,8 +542,23 @@
       const WEATHER_URL = 'https://api.openweathermap.org/data/2.5/weather?q=Quito,ec&units=metric&appid=' + API_KEY;
       const SOAP_ENDPOINT = 'http://localhost:8000/productos';
       const SOAP_NS = 'http://localhost:8000/productos/wsdl';
+
+      // Catálogo de sedes físicas donde se distribuye el inventario.
+      // IMPORTANTE: este mismo array (mismos id/nombre/lat/lng) también existe,
+      // literal, en server.js (constante SEDES) para validar la sede al
+      // registrar productos. No hay un módulo compartido entre backend y este
+      // frontend estático, así que si se agrega, quita o renombra una sede hay
+      // que actualizar los DOS archivos a mano.
+      const SEDES = [
+        { id: 'centro', nombre: 'Almacén Centro', lat: -0.1807, lng: -78.4678 },
+        { id: 'norte', nombre: 'Sucursal Norte', lat: -0.1000, lng: -78.4800 },
+        { id: 'sur', nombre: 'Sucursal Sur', lat: -0.2500, lng: -78.5200 },
+      ];
+      const SEDE_DEFAULT = 'centro';
+
       let mapa;
       let mapaInstanciado = false;
+      let capaMarcadoresSedes;
 
       const weatherEl = document.getElementById('weather');
       const navButtons = Array.from(document.querySelectorAll('.nav-btn'));
@@ -568,10 +588,10 @@
           button.classList.toggle('active', button.dataset.view === vistaId);
         });
         if (vistaId === 'vista-listar') {
+          // listarProductos() se encarga de repintar el mapa (actualizarMapaSedes)
+          // con los datos frescos una vez que llega la respuesta del listado.
           listarProductos();
-          if (!mapaInstanciado) {
-            inicializarMapa();
-          } else {
+          if (mapaInstanciado) {
             setTimeout(() => mapa.invalidateSize(), 200);
           }
         }
@@ -668,6 +688,7 @@
           categoria: producto.getElementsByTagName('categoria')[0]?.textContent || '',
           precio: producto.getElementsByTagName('precio')[0]?.textContent || '',
           cantidad: producto.getElementsByTagName('cantidad')[0]?.textContent || '',
+          sede: producto.getElementsByTagName('sede')[0]?.textContent || SEDE_DEFAULT,
         }));
       }
 
@@ -690,15 +711,14 @@
       async function listarProductos() {
         try {
           const xml = construirXml('ListarProductosRequest');
+          // No se valida "fault"/"false" en el texto crudo: ListarProductosResponse
+          // no trae <estado>, así que ese heurístico disparaba falsos positivos con
+          // productos cuyo nombre/categoría contuviera la palabra "false". Un Fault
+          // real ya lo detecta y lanza enviarSoap() antes de llegar aquí.
           const responseText = await enviarSoap(xml);
-          const lower = responseText.toLowerCase();
-          if (lower.includes('fault') || lower.includes('false')) {
-            mostrarMensaje(mensajeListar, 'error', 'No fue posible listar los productos.');
-            return;
-          }
           const productos = parsearInventario(responseText);
           if (!productos.length) {
-            tablaInventario.innerHTML = '<tr><td colspan="5" style="color: var(--muted);">No hay productos registrados.</td></tr>';
+            tablaInventario.innerHTML = '<tr><td colspan="6" style="color: var(--muted);">No hay productos registrados.</td></tr>';
           } else {
             tablaInventario.innerHTML = productos.map((producto) => `
               <tr>
@@ -707,8 +727,27 @@
                 <td>${producto.categoria}</td>
                 <td>${producto.precio}</td>
                 <td>${producto.cantidad}</td>
+                <td>${nombreSede(producto.sede)}</td>
               </tr>
             `).join('');
+          }
+          // El mapa solo se (re)pinta si la vista "Listar" está activa: Leaflet
+          // no calcula bien el tamaño de un mapa dentro de un contenedor oculto
+          // (display:none), así que si listarProductos() se dispara mientras el
+          // usuario está en otra vista (p. ej. la carga inicial de la página),
+          // el mapa se deja para cuando el usuario realmente entre a "Listar"
+          // (cambiarVista ya llama a listarProductos() en ese momento).
+          //
+          // Se aísla en su propio try/catch: si Leaflet no cargó (CDN caído,
+          // sin internet, bloqueador de contenido), el listado y su tabla ya
+          // se pintaron bien y no deben reportarse como un error solo porque
+          // el mapa falló.
+          if (document.getElementById('vista-listar').classList.contains('active')) {
+            try {
+              actualizarMapaSedes(productos);
+            } catch (errorMapa) {
+              console.error('No se pudo actualizar el mapa de sedes:', errorMapa);
+            }
           }
           mostrarMensaje(mensajeListar, 'success', 'Inventario cargado correctamente.');
         } catch (error) {
@@ -724,12 +763,14 @@
           const categoria = document.getElementById('registrarCategoria').value.trim();
           const precio = document.getElementById('registrarPrecio').value.trim();
           const cantidad = document.getElementById('registrarCantidad').value.trim();
+          const sede = document.getElementById('registrarSede').value;
           const xml = construirXml('RegistrarProductoRequest', [
             { name: 'codigo', value: codigo },
             { name: 'nombre', value: nombre },
             { name: 'categoria', value: categoria },
             { name: 'precio', value: precio },
             { name: 'cantidad', value: cantidad },
+            { name: 'sede', value: sede },
           ]);
           const responseText = await enviarSoap(xml);
           const { estado, mensaje } = leerEstadoYMensaje(responseText);
@@ -743,6 +784,7 @@
           document.getElementById('registrarCategoria').value = '';
           document.getElementById('registrarPrecio').value = '';
           document.getElementById('registrarCantidad').value = '';
+          document.getElementById('registrarSede').value = SEDES[0].id;
         } catch (error) {
           mostrarMensaje(mensajeRegistrar, 'error', 'Error al registrar producto: ' + (error.message || error));
           console.error(error);
@@ -770,6 +812,7 @@
           const categoria = doc.getElementsByTagName('categoria')[0]?.textContent || 'N/A';
           const precio = doc.getElementsByTagName('precio')[0]?.textContent || '0';
           const cantidad = doc.getElementsByTagName('cantidad')[0]?.textContent || '0';
+          const sede = doc.getElementsByTagName('sede')[0]?.textContent || SEDE_DEFAULT;
           consultarResultado.innerHTML = `
             <div class="output-card">
               <p><strong>Detalles del Producto</strong></p>
@@ -778,6 +821,7 @@
               <p>Categoría: ${categoria}</p>
               <p>Precio: $${precio}</p>
               <p>Stock: ${cantidad}</p>
+              <p>Sede: ${nombreSede(sede)}</p>
             </div>
           `;
           consultarResultado.classList.remove('hidden');
@@ -864,20 +908,65 @@
         }
       }
 
+      function nombreSede(id) {
+        return SEDES.find((sede) => sede.id === id)?.nombre || id || SEDE_DEFAULT;
+      }
+
+      function poblarSelectSedes() {
+        const select = document.getElementById('registrarSede');
+        select.innerHTML = SEDES.map((sede) => `<option value="${sede.id}">${sede.nombre}</option>`).join('');
+        select.value = SEDES[0].id;
+      }
+
       function inicializarMapa() {
         mapa = L.map('mapa').setView([-0.1807, -78.4678], 11);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; OpenStreetMap contributors',
         }).addTo(mapa);
-        const sucursales = [
-          { nombre: 'Almacén Centro', coordenadas: [-0.1807, -78.4678] },
-          { nombre: 'Sucursal Norte', coordenadas: [-0.1000, -78.4800] },
-          { nombre: 'Sucursal Sur', coordenadas: [-0.2500, -78.5200] },
-        ];
-        const marcadores = sucursales.map((sucursal) => L.marker(sucursal.coordenadas).addTo(mapa).bindPopup(sucursal.nombre));
-        const bounds = L.featureGroup(marcadores).getBounds();
-        mapa.fitBounds(bounds, { padding: [20, 20] });
+        capaMarcadoresSedes = L.layerGroup().addTo(mapa);
         mapaInstanciado = true;
+      }
+
+      // Recibe la lista de productos ya parseada (la que devuelve
+      // listarProductos()/parsearInventario), agrupa por sede usando el
+      // catálogo SEDES y pinta un marcador por sede que tenga al menos un
+      // producto. Se llama en cada actualización del listado, así que limpia
+      // la capa de marcadores (clearLayers) en vez de recrear el mapa entero,
+      // para no duplicar marcadores ni perder el zoom/posición del usuario.
+      function actualizarMapaSedes(productos) {
+        if (!mapaInstanciado) {
+          inicializarMapa();
+        }
+        capaMarcadoresSedes.clearLayers();
+
+        const productosPorSede = new Map();
+        productos.forEach((producto) => {
+          const sedeId = SEDES.some((sede) => sede.id === producto.sede) ? producto.sede : SEDE_DEFAULT;
+          if (!productosPorSede.has(sedeId)) {
+            productosPorSede.set(sedeId, []);
+          }
+          productosPorSede.get(sedeId).push(producto);
+        });
+
+        const marcadores = [];
+        SEDES.forEach((sede) => {
+          const productosDeSede = productosPorSede.get(sede.id);
+          if (!productosDeSede || !productosDeSede.length) return;
+
+          const listaHtml = productosDeSede
+            .map((producto) => `${producto.codigo} — ${producto.nombre}`)
+            .join('<br>');
+          const popupHtml = `<strong>${sede.nombre}</strong><br>${listaHtml}`;
+
+          const marcador = L.marker([sede.lat, sede.lng]).bindPopup(popupHtml);
+          capaMarcadoresSedes.addLayer(marcador);
+          marcadores.push(marcador);
+        });
+
+        if (marcadores.length) {
+          const bounds = L.featureGroup(marcadores).getBounds();
+          mapa.fitBounds(bounds, { padding: [20, 20] });
+        }
       }
 
       registrarBtn.addEventListener('click', registrarProducto);
@@ -887,6 +976,7 @@
       calcularValorBtn.addEventListener('click', calcularValor);
       eliminarBtn.addEventListener('click', eliminarProducto);
 
+      poblarSelectSedes();
       cargarClima();
       listarProductos();
       cambiarVista('vista-registrar');
